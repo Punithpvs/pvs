@@ -1,12 +1,12 @@
 // Firebase config - replace with your own project details
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_ID",
-  appId: "YOUR_APP_ID",
-  databaseURL: "YOUR_DATABASE_URL"
+  apiKey: "AIzaSyBsEfun4555Y1TaBqxFEBz-7vmjKYcDCqg",
+  authDomain: "ps-chat-5699a.firebaseapp.com",
+  projectId: "ps-chat-5699a",
+  storageBucket: "ps-chat-5699a.firebasestorage.app",
+  messagingSenderId: "1087992118523",
+  appId: "1:1087992118523:web:5ca154a66ca6a917fb845e"
+
 };
 firebase.initializeApp(firebaseConfig);
 

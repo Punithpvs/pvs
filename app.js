@@ -1,4 +1,4 @@
-// Firebase config - replace with your own project details
+// --- Firebase Config (replace with your values from Firebase console) ---
 const firebaseConfig = {
   apiKey: "AIzaSyBsEfun4555Y1TaBqxFEBz-7vmjKYcDCqg",
   authDomain: "ps-chat-5699a.firebaseapp.com",
@@ -6,70 +6,83 @@ const firebaseConfig = {
   storageBucket: "ps-chat-5699a.firebasestorage.app",
   messagingSenderId: "1087992118523",
   appId: "1:1087992118523:web:5ca154a66ca6a917fb845e"
-
 };
 firebase.initializeApp(firebaseConfig);
+const firestore = firebase.firestore();
 
-const auth = firebase.auth();
-const db = firebase.firestore();
-const dbSignaling = firebase.database().ref('videoCall');
+// --- WebRTC Setup ---
+let pc = null;
+let localStream = null;
+let remoteStream = null;
 
-// DOM refs
-const presenceEl = document.getElementById('presence');
-const chatBody = document.getElementById('chatBody');
-const messageBox = document.getElementById('messageBox');
-const sendBtn = document.getElementById('sendBtn');
-const videoBtn = document.getElementById('videoBtn');
-const videoModal = document.getElementById('videoModal');
-const localPreview = document.getElementById('localPreview');
-const remotePreview = document.getElementById('remotePreview');
-const endVideo = document.getElementById('endVideo');
-const tabChat = document.getElementById('tabChat');
-const tabStatus = document.getElementById('tabStatus');
-const panelChat = document.getElementById('panelChat');
-const panelStatus = document.getElementById('panelStatus');
-const statusText = document.getElementById('statusText');
-const statusImageUrl = document.getElementById('statusImageUrl');
-const postStatusBtn = document.getElementById('postStatusBtn');
-const statusList = document.getElementById('statusList');
-const statusModal = document.getElementById('statusModal');
-const modalMedia = document.getElementById('modalMedia');
-const modalCaption = document.getElementById('modalCaption');
-const closeModal = document.getElementById('closeModal');
+const videoBtn = document.getElementById("videoBtn");
+const videoModal = document.getElementById("videoModal");
+const closeVideo = document.getElementById("closeVideo");
+const localVideo = document.getElementById("localVideo");
+const remoteVideo = document.getElementById("remoteVideo");
 
-let currentUser = null;
-const DAY_MS = 24*60*60*1000;
-let localStream = null, remoteStream = null, pc = null;
-const callId = "room1"; // fixed room for two-user call
+videoBtn.addEventListener("click", startCall);
+closeVideo.addEventListener("click", () => {
+  videoModal.classList.add("hidden");
+  if (pc) pc.close();
+});
 
-// --- Auth
-auth.signInAnonymously().catch(console.error);
-auth.onAuthStateChanged(u => { currentUser = u; presenceEl.textContent = u?'Online':'Offline'; });
+async function startCall() {
+  videoModal.classList.remove("hidden");
 
-// --- Tabs
-tabChat.addEventListener('click', ()=>{ tabChat.classList.add('active'); tabStatus.classList.remove('active'); panelChat.classList.remove('hidden'); panelStatus.classList.add('hidden'); });
-tabStatus.addEventListener('click', ()=>{ tabStatus.classList.add('active'); tabChat.classList.remove('active'); panelStatus.classList.remove('hidden'); panelChat.classList.add('hidden'); });
+  // Create RTCPeerConnection
+  pc = new RTCPeerConnection();
+  remoteStream = new MediaStream();
 
-// --- Chat
-async function sendMessage(){
-  if(!currentUser) return alert('Signing in...');
-  const raw = messageBox.innerText.trim();
-  if(!raw||raw==='Message') return;
-  const now = firebase.firestore.Timestamp.now();
-  await db.collection('messages').add({uid:currentUser.uid,text:raw,createdAt:now,expiresAt:firebase.firestore.Timestamp.fromMillis(now.toMillis()+DAY_MS)});
-  messageBox.innerText='Message';
-}
-sendBtn.addEventListener('click',sendMessage);
-messageBox.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendMessage(); }});
-db.collection('messages').orderBy('createdAt','asc').onSnapshot(snap=>{
-  chatBody.innerHTML='';
-  snap.forEach(doc=>{
-    const data=doc.data();
-    const wrap=document.createElement('div');
-    wrap.className='msg'+(currentUser&&data.uid===currentUser.uid?' me':'');
-    const textHtml = data.text?`<div class="body">${escapeHtml(data.text)}</div>`:'';
-    const meta = `<div class="meta">${currentUser&&data.uid===currentUser.uid?'Me':'User'} • ${fmtTime(data.createdAt)}</div>`;
-    wrap.innerHTML = textHtml + meta;
-    chatBody.appendChild(wrap);
+  // Get local camera + mic
+  localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+  localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+  localVideo.srcObject = localStream;
+  remoteVideo.srcObject = remoteStream;
+
+  pc.ontrack = event => {
+    event.streams[0].getTracks().forEach(track => {
+      remoteStream.addTrack(track);
+    });
+  };
+
+  // Firebase signaling
+  const callDoc = firestore.collection("calls").doc("room1");
+  const offerCandidates = callDoc.collection("offerCandidates");
+  const answerCandidates = callDoc.collection("answerCandidates");
+
+  pc.onicecandidate = event => {
+    if (event.candidate) {
+      offerCandidates.add(event.candidate.toJSON());
+    }
+  };
+
+  // Create offer
+  const offerDescription = await pc.createOffer();
+  await pc.setLocalDescription(offerDescription);
+
+  const offer = {
+    sdp: offerDescription.sdp,
+    type: offerDescription.type,
+  };
+  await callDoc.set({ offer });
+
+  // Listen for answer
+  callDoc.onSnapshot(snapshot => {
+    const data = snapshot.data();
+    if (!pc.currentRemoteDescription && data?.answer) {
+      const answerDescription = new RTCSessionDescription(data.answer);
+      pc.setRemoteDescription(answerDescription);
+    }
   });
-  chatBody.scrollTop
+
+  // Listen for ICE candidates
+  answerCandidates.onSnapshot(snapshot => {
+    snapshot.docChanges().forEach(change => {
+      if (change.type === "added") {
+        const candidate = new RTCIceCandidate(change.doc.data());
+        pc.addIceCandidate(candidate);
+      }
+    });
+  });
+}

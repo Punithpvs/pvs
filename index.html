@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>P❤️S Chat (No Storage)</title>
   <link rel="stylesheet" href="style.css"/>
+
   <!-- Firebase compat SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore-compat.js"></script>
 </head>
 <body>
@@ -17,10 +17,8 @@
         <div class="avatar"></div>
         <div id="presence" class="status-text">Offline</div>
       </div>
-
       <div class="center-title">P❤️S</div>
-
-      <div class="right-icon" id="videoBtn" title="Video call (local preview)">
+      <div class="right-icon" id="videoBtn" title="Video call">
         <svg class="video-svg" viewBox="0 0 24 24" aria-hidden="true">
           <rect x="2" y="6" width="14" height="12" rx="2" ry="2"></rect>
           <path d="M22 7l-6 4v2l6 4V7z"></path>
@@ -28,47 +26,19 @@
       </div>
     </div>
 
-    <div class="tabs">
-      <button id="tabChat" class="tab-btn active">Chat</button>
-      <button id="tabStatus" class="tab-btn">Status</button>
-    </div>
-
-    <!-- Chat Panel -->
-    <div id="panelChat" class="panel">
-      <div id="chatBody" class="chat-body"></div>
-
-      <div class="bottom">
-        <div class="input-box" contenteditable="true" id="messageBox" role="textbox">Message</div>
-        <button id="sendBtn" class="send-btn">SEND</button>
-      </div>
-    </div>
-
-    <!-- Status Panel -->
-    <div id="panelStatus" class="panel hidden">
-      <div class="status-uploader">
-        <input id="statusText" type="text" placeholder="What's on your mind?" />
-        <input id="statusImageUrl" type="text" placeholder="Optional image URL (host elsewhere)" />
-        <button id="postStatusBtn">Post</button>
-      </div>
-      <div id="statusList" class="status-list"></div>
+    <div id="chatBody" class="chat-body"></div>
+    <div class="bottom">
+      <div class="input-box" contenteditable="true" id="messageBox" role="textbox">Message</div>
+      <button id="sendBtn" class="send-btn">SEND</button>
     </div>
   </div>
 
-  <!-- Video Modal (local preview) -->
+  <!-- Video Call Modal -->
   <div id="videoModal" class="modal hidden">
     <div class="modal-content">
-      <button id="endVideo" class="close-btn">End</button>
-      <h3 style="margin-top:0">Local Video Preview</h3>
-      <video id="localPreview" autoplay muted playsinline style="width:100%;max-height:60vh;border-radius:8px;background:#000"></video>
-    </div>
-  </div>
-
-  <!-- Status Modal to view status fullscreen -->
-  <div id="statusModal" class="modal hidden">
-    <div class="modal-content">
-      <button id="closeModal" class="close-btn">✕</button>
-      <div id="modalMedia"></div>
-      <div id="modalCaption" class="modal-caption"></div>
+      <button id="closeVideo" class="close-btn">✕</button>
+      <video id="localVideo" autoplay playsinline muted></video>
+      <video id="remoteVideo" autoplay playsinline></video>
     </div>
   </div>
 
